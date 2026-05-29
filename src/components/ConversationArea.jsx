@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { getInitials } from "../utils/avatar";
 
-function ConversationArea({ activeChatId, activeChatData, messages = [], onSendMessage }) {
+function ConversationArea({ activeChatId, activeChatData, messages = [], onSendMessage, onLoadMore, hasMoreMessages }) {
   const { user } = useAuth();
   const [messageInput, setMessageInput] = useState("");
   const [showChatMenu, setShowChatMenu] = useState(false);
-  const [showMediaViewer, setShowMediaViewer] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -15,7 +16,12 @@ function ConversationArea({ activeChatId, activeChatData, messages = [], onSendM
     }
   };
 
-  // Helper to format timestamp
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    await onLoadMore();
+    setLoadingMore(false);
+  };
+
   const formatTime = (timestamp) => {
     if (!timestamp) return "";
     const date = new Date(timestamp);
@@ -38,7 +44,6 @@ function ConversationArea({ activeChatId, activeChatData, messages = [], onSendM
     );
   }
 
-  // Transform API messages to the format expected by the renderer
   const renderMessages = messages.map(msg => ({
     id: msg.id,
     text: msg.content,
@@ -55,7 +60,7 @@ function ConversationArea({ activeChatId, activeChatData, messages = [], onSendM
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-600 to-emerald-600 flex items-center justify-center text-white font-semibold text-sm">
-              {activeChatData?.avatar || activeChatData?.name?.[0] || '?'}
+              {activeChatData?.avatar || getInitials(activeChatData?.name)}
             </div>
             {activeChatData?.online && (
               <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white"></div>
@@ -98,48 +103,61 @@ function ConversationArea({ activeChatId, activeChatData, messages = [], onSendM
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {renderMessages.map((message) => (
-          <div key={message.id}>
-            <div className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[70%] ${message.sender === 'me' ? 'order-2' : 'order-1'}`}>
-                {message.type === 'image' ? (
-                  <div className="rounded-lg overflow-hidden cursor-pointer" onClick={() => setShowMediaViewer(true)}>
-                    <img src={message.mediaUrl} alt="Shared" className="max-w-[200px] rounded-lg" />
-                  </div>
-                ) : message.type === 'file' ? (
-                  <div className="bg-gray-100 rounded-2xl px-3 py-1.5 flex items-center gap-2">
-                    <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    <a href={message.mediaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">
-                      {message.text}
-                    </a>
-                  </div>
-                ) : message.type === 'link' ? (
-                  <div className="bg-gray-100 rounded-2xl px-3 py-1.5">
-                    <a href={message.mediaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">
-                      {message.text}
-                    </a>
-                  </div>
-                ) : (
-                  <div
-                    className={`rounded-2xl px-3 py-1.5 ${
-                      message.sender === 'me'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white text-gray-900 shadow-sm border border-gray-200'
-                    }`}
-                  >
-                    <p className="text-sm">{message.text}</p>
-                  </div>
-                )}
-                <p className={`text-xs text-gray-400 mt-0.5 ${message.sender === 'me' ? 'text-right' : 'text-left'}`}>
-                  {message.time}
-                </p>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col-reverse">
+        <div className="space-y-3">
+          {hasMoreMessages && (
+            <div className="flex justify-center my-2">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
+              >
+                {loadingMore ? 'Loading...' : 'Load older messages'}
+              </button>
+            </div>
+          )}
+          {renderMessages.map((message) => (
+            <div key={message.id}>
+              <div className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[70%] ${message.sender === 'me' ? 'order-2' : 'order-1'}`}>
+                  {message.type === 'image' ? (
+                    <div className="rounded-lg overflow-hidden cursor-pointer">
+                      <img src={message.mediaUrl} alt="Shared" className="max-w-[200px] rounded-lg" />
+                    </div>
+                  ) : message.type === 'file' ? (
+                    <div className="bg-gray-100 rounded-2xl px-3 py-1.5 flex items-center gap-2">
+                      <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      <a href={message.mediaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">
+                        {message.text}
+                      </a>
+                    </div>
+                  ) : message.type === 'link' ? (
+                    <div className="bg-gray-100 rounded-2xl px-3 py-1.5">
+                      <a href={message.mediaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">
+                        {message.text}
+                      </a>
+                    </div>
+                  ) : (
+                    <div
+                      className={`rounded-2xl px-3 py-1.5 ${
+                        message.sender === 'me'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-900 shadow-sm border border-gray-200'
+                      }`}
+                    >
+                      <p className="text-sm">{message.text}</p>
+                    </div>
+                  )}
+                  <p className={`text-xs text-gray-400 mt-0.5 ${message.sender === 'me' ? 'text-right' : 'text-left'}`}>
+                    {message.time}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* Message Input */}

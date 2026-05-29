@@ -5,13 +5,24 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// ✅ CORRECT CORS setup (no manual OPTIONS handler needed)
-app.use(cors({
-  origin: 'http://localhost:5173',   // your frontend origin
+// CORS options - explicit and permissive for development
+const corsOptions = {
+  origin: 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight manually (optional but ensures)
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.sendStatus(200);
+});
 
 app.use(express.json());
 

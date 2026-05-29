@@ -1,3 +1,5 @@
+import { getInitials } from '../utils/avatar';
+
 function ChatDetails({ activeChatData, sharedMedia }) {
     if (!activeChatData) return null;
   

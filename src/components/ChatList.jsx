@@ -1,3 +1,5 @@
+import { getInitials } from '../utils/avatar';
+
 function ChatList({ activeTab, searchQuery, setSearchQuery, chats, groups, contacts, activeChat, setActiveChat }) {
     const getFilteredItems = () => {
       if (activeTab === "chats") {

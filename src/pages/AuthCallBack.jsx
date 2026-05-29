@@ -10,40 +10,23 @@ function AuthCallback() {
     useEffect(() => {
         const handleCallback = async () => {
             try {
-                // Get the session from the URL hash
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                
                 if (sessionError) throw sessionError;
-                
                 if (session) {
-                    setMessage('Sign in successful! Redirecting...');
-                    // Redirect to home page after successful sign in
-                    setTimeout(() => {
-                        navigate('/', { replace: true });
-                    }, 1000);
+                    navigate('/', { replace: true });
                 } else {
-                    // Check if there's an error in the URL
                     const hashParams = new URLSearchParams(window.location.hash.substring(1));
                     const errorDesc = hashParams.get('error_description');
-                    
-                    if (errorDesc) {
-                        throw new Error(errorDesc);
-                    }
-                    
+                    if (errorDesc) throw new Error(errorDesc);
                     setError('Unable to complete sign in. Please try again.');
-                    setTimeout(() => {
-                        navigate('/login', { replace: true });
-                    }, 3000);
+                    navigate('/login', { replace: true });
                 }
             } catch (err) {
                 console.error('Auth callback error:', err);
                 setError(err.message || 'Authentication failed');
-                setTimeout(() => {
-                    navigate('/login', { replace: true });
-                }, 3000);
+                navigate('/login', { replace: true });
             }
         };
-
         handleCallback();
     }, [navigate]);
 
@@ -71,7 +54,6 @@ function AuthCallback() {
             <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600">{message}</p>
-                <p className="text-xs text-gray-400 mt-2">Please wait...</p>
             </div>
         </div>
     );

@@ -7,6 +7,7 @@ import ConversationArea from "../components/ConversationArea";
 import ChatDetails from "../components/ChatDetails";
 import { api } from "../api/client";
 import { supabase } from "../lib/supabase";
+import { useDebounce } from "../hooks/useDebounce";
 
 function Home() {
   const { user, signOut } = useAuth();
@@ -15,19 +16,19 @@ function Home() {
   const [activeChat, setActiveChat] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
-  // State for real data
-  const [chats, setChats] = useState([]);        // direct chats
-  const [groups, setGroups] = useState([]);      // group chats
-  const [contacts, setContacts] = useState([]);  // all other users
-  const [messages, setMessages] = useState({});  // object mapping chatId -> array of messages
+  const [chats, setChats] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [messages, setMessages] = useState({});
   const [sharedMedia, setSharedMedia] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasMoreMessages, setHasMoreMessages] = useState({});
 
-  // Refs for subscription cleanup
   const subscriptionRef = useRef(null);
 
-  // Load chats and contacts on mount
+  // Load chats and contacts
   useEffect(() => {
     async function loadInitialData() {
       try {
@@ -56,6 +57,38 @@ function Home() {
     loadInitialData();
   }, []);
 
+  // Search contacts with debounce
+  useEffect(() => {
+    async function searchContacts() {
+      if (!debouncedSearch.trim()) {
+        const allUsers = await api.getAllUsers();
+        const formatted = allUsers.map(u => ({
+          id: u.id,
+          name: u.full_name,
+          avatar: (u.full_name?.[0] || 'U').toUpperCase(),
+          online: u.status === 'online',
+          status: u.status || 'Available'
+        }));
+        setContacts(formatted);
+        return;
+      }
+      try {
+        const results = await api.searchUsers(debouncedSearch);
+        const formatted = results.map(u => ({
+          id: u.id,
+          name: u.full_name,
+          avatar: (u.full_name?.[0] || 'U').toUpperCase(),
+          online: u.status === 'online',
+          status: u.status || 'Available'
+        }));
+        setContacts(formatted);
+      } catch (err) {
+        console.error('Search failed:', err);
+      }
+    }
+    searchContacts();
+  }, [debouncedSearch]);
+
   // Load messages when activeChat changes
   useEffect(() => {
     if (!activeChat) return;
@@ -64,6 +97,7 @@ function Home() {
       try {
         const msgs = await api.getMessages(activeChat, 50);
         setMessages(prev => ({ ...prev, [activeChat]: msgs }));
+        setHasMoreMessages(prev => ({ ...prev, [activeChat]: msgs.length === 50 }));
 
         const media = msgs.filter(m => m.type === 'image' || m.type === 'file' || m.type === 'link')
           .map(m => ({
@@ -81,12 +115,10 @@ function Home() {
     }
     loadMessages();
 
-    // Cleanup previous subscription if any
     if (subscriptionRef.current) {
       subscriptionRef.current.unsubscribe();
     }
 
-    // Subscribe to new messages for the active chat
     const subscription = supabase
       .channel(`messages:chat_id=eq.${activeChat}`)
       .on(
@@ -99,7 +131,6 @@ function Home() {
         },
         (payload) => {
           const newMessage = payload.new;
-          // Only add if not already present (avoid duplicates)
           setMessages(prev => {
             const existing = prev[activeChat] || [];
             if (existing.some(msg => msg.id === newMessage.id)) return prev;
@@ -108,7 +139,6 @@ function Home() {
               [activeChat]: [...existing, newMessage]
             };
           });
-          // Update shared media if needed
           if (newMessage.type === 'image' || newMessage.type === 'file' || newMessage.type === 'link') {
             setSharedMedia(prev => [
               ...prev,
@@ -121,16 +151,23 @@ function Home() {
               }
             ]);
           }
-          // Optionally update chat list (bump updated_at, unread count)
-          // For simplicity, you could refetch chats or optimistically update
+          // Update chat list order for incoming message
           if (newMessage.sender_id !== user?.id) {
-            // Incoming message – you might want to increment unread count and reorder chat list
-            // We'll refetch chats to keep it simple (or you can do a more targeted update)
-            api.getChats().then(allChats => {
-              const direct = allChats.filter(c => c.type === 'direct');
-              const groupList = allChats.filter(c => c.type === 'group');
-              setChats(direct);
-              setGroups(groupList);
+            setChats(prevChats => {
+              const updated = prevChats.map(chat =>
+                chat.id === newMessage.chat_id
+                  ? { ...chat, lastMessage: newMessage.content, lastMessageTime: newMessage.created_at }
+                  : chat
+              );
+              return updated.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
+            });
+            setGroups(prevGroups => {
+              const updated = prevGroups.map(group =>
+                group.id === newMessage.chat_id
+                  ? { ...group, lastMessage: newMessage.content, lastMessageTime: newMessage.created_at }
+                  : group
+              );
+              return updated.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
             });
           }
         }
@@ -146,6 +183,27 @@ function Home() {
     };
   }, [activeChat, user?.id]);
 
+  const loadMoreMessages = async (chatId) => {
+    const currentMessages = messages[chatId] || [];
+    if (currentMessages.length === 0) return;
+    const oldestTimestamp = currentMessages[0]?.created_at;
+    if (!oldestTimestamp) return;
+    try {
+      const olderMessages = await api.getMessages(chatId, 20, oldestTimestamp);
+      if (olderMessages.length === 0) {
+        setHasMoreMessages(prev => ({ ...prev, [chatId]: false }));
+        return;
+      }
+      setMessages(prev => ({
+        ...prev,
+        [chatId]: [...olderMessages, ...prev[chatId]]
+      }));
+      setHasMoreMessages(prev => ({ ...prev, [chatId]: olderMessages.length === 20 }));
+    } catch (err) {
+      console.error('Failed to load more messages:', err);
+    }
+  };
+
   const handleLogout = async () => {
     const result = await signOut();
     if (result.success) {
@@ -158,20 +216,23 @@ function Home() {
   const handleSendMessage = async (chatId, text) => {
     try {
       const newMsg = await api.sendMessage(chatId, text);
-      // Optimistically add message to local state
       setMessages(prev => ({
         ...prev,
         [chatId]: [...(prev[chatId] || []), newMsg]
       }));
-      // Also update the chat list order (bump this chat to top)
+      // Optimistically reorder chat list
       setChats(prevChats => {
         const updated = prevChats.map(chat =>
           chat.id === chatId ? { ...chat, lastMessage: text, lastMessageTime: new Date().toISOString() } : chat
         );
-        // Sort by lastMessageTime descending
         return updated.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
       });
-      // Similarly for groups if needed
+      setGroups(prevGroups => {
+        const updated = prevGroups.map(group =>
+          group.id === chatId ? { ...group, lastMessage: text, lastMessageTime: new Date().toISOString() } : group
+        );
+        return updated.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
+      });
     } catch (err) {
       console.error('Send failed:', err);
     }
@@ -219,6 +280,8 @@ function Home() {
           activeChatData={activeChatData}
           messages={activeMessages}
           onSendMessage={handleSendMessage}
+          onLoadMore={() => loadMoreMessages(activeChat)}
+          hasMoreMessages={hasMoreMessages[activeChat] !== false}
         />
 
         <ChatDetails activeChatData={activeChatData} sharedMedia={sharedMedia} />

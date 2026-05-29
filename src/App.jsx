@@ -7,6 +7,7 @@ import ResetPassword from './pages/ResetPassword';
 import Home from './pages/Home';
 import AuthCallback from './pages/AuthCallBack';
 import ProtectedRoute from './components/ProtectedRoute';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -25,6 +26,11 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        } />
       </Routes>
     </AuthProvider>
   );
