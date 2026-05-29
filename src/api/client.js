@@ -32,7 +32,7 @@ export const api = {
   },
   sendMessage: (chatId, content, type = 'text', mediaUrl = null) =>
     request('/messages', { method: 'POST', body: JSON.stringify({ chatId, content, type, mediaUrl }) }),
-  searchUsers: (query) => request(`/users?search=${encodeURIComponent(query)}`),
+  searchUsers: (query) => request(`/users/search?q=${encodeURIComponent(query)}`),
   getAllUsers: () => request('/users/all'),
   createDirectChat: (otherUserId) => request('/chats', { method: 'POST', body: JSON.stringify({ type: 'direct', otherUserId }) }),
 };

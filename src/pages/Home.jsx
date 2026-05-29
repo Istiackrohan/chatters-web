@@ -60,27 +60,16 @@ function Home() {
   // Search contacts with debounce
   useEffect(() => {
     async function searchContacts() {
-      if (!debouncedSearch.trim()) {
-        const allUsers = await api.getAllUsers();
-        const formatted = allUsers.map(u => ({
-          id: u.id,
-          name: u.full_name,
-          avatar: (u.full_name?.[0] || 'U').toUpperCase(),
-          online: u.status === 'online',
-          status: u.status || 'Available'
-        }));
-        setContacts(formatted);
-        return;
-      }
       try {
-        const results = await api.searchUsers(debouncedSearch);
-        const formatted = results.map(u => ({
-          id: u.id,
-          name: u.full_name,
-          avatar: (u.full_name?.[0] || 'U').toUpperCase(),
-          online: u.status === 'online',
-          status: u.status || 'Available'
-        }));
+        const results = debouncedSearch.trim()
+          ? await api.searchUsers(debouncedSearch)
+          : await api.getAllUsers(); const formatted = results.map(u => ({
+            id: u.id,
+            name: u.full_name,
+            avatar: (u.full_name?.[0] || 'U').toUpperCase(),
+            online: u.status === 'online',
+            status: u.status || 'Available'
+          }));
         setContacts(formatted);
       } catch (err) {
         console.error('Search failed:', err);
