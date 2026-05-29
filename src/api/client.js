@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
+const API_BASE = (import.meta.env.VITE_API_BASE || '/api').replace(/\/$/, '');
 
 async function request(endpoint, options = {}) {
   // Get the current session from Supabase (this is the reliable way)
@@ -32,7 +32,7 @@ export const api = {
   },
   sendMessage: (chatId, content, type = 'text', mediaUrl = null) =>
     request('/messages', { method: 'POST', body: JSON.stringify({ chatId, content, type, mediaUrl }) }),
-  searchUsers: (query) => request(`/users/search?q=${encodeURIComponent(query)}`),
+  searchUsers: (query) => request(`/users/search?q=${encodeURIComponent(query)}`),  
   getAllUsers: () => request('/users/all'),
   createDirectChat: (otherUserId) => request('/chats', { method: 'POST', body: JSON.stringify({ type: 'direct', otherUserId }) }),
 };

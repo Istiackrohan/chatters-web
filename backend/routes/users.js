@@ -18,7 +18,7 @@ router.get('/all', verifyToken, async (req, res) => {
     }
 });
 
-// GET /api/users?search=query - search users by name
+// GET /api/users/search?q=query - search users by name
 router.get('/search', verifyToken, async (req, res) => {
     const { q } = req.query;
     const currentUserId = req.user.id;

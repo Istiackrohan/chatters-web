@@ -63,18 +63,22 @@ function Home() {
       try {
         const results = debouncedSearch.trim()
           ? await api.searchUsers(debouncedSearch)
-          : await api.getAllUsers(); const formatted = results.map(u => ({
-            id: u.id,
-            name: u.full_name,
-            avatar: (u.full_name?.[0] || 'U').toUpperCase(),
-            online: u.status === 'online',
-            status: u.status || 'Available'
-          }));
+          : await api.getAllUsers();
+
+        const formatted = results.map(u => ({
+          id: u.id,
+          name: u.full_name,
+          avatar: (u.full_name?.[0] || 'U').toUpperCase(),
+          online: u.status === 'online',
+          status: u.status || 'Available'
+        }));
+
         setContacts(formatted);
       } catch (err) {
         console.error('Search failed:', err);
       }
     }
+
     searchContacts();
   }, [debouncedSearch]);
 
