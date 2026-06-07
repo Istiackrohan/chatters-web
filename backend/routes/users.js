@@ -5,6 +5,7 @@ const verifyToken = require('../middleware/auth');
 
 // GET /api/users/all
 router.get('/all', verifyToken, async (req, res) => {
+    console.log("Users req, res:", req, " ", res);
     const currentUserId = req.user.id;
     try {
         const { data, error } = await supabase

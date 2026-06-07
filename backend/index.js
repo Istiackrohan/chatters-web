@@ -3,7 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 5001;
 
 // Allow local dev clients to call the API with the Authorization header.
 const configuredAllowedOrigins = (process.env.CORS_ORIGIN || '')
@@ -43,19 +43,21 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 
+app.use(cors());
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 
 app.use(express.json());
 
 // Routes
-app.use('/api/chats', require('./routes/chats'));
-app.use('/api/messages', require('./routes/messages'));
-app.use('/api/users', require('./routes/users'));
+app.use('/chats', require('./routes/chats'));
+app.use('/messages', require('./routes/messages'));
+app.use('/users', require('./routes/users'));
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.send("The server is running.....")
 });
 
 app.listen(port, () => {

@@ -5,6 +5,7 @@ const verifyToken = require('../middleware/auth');
 
 // GET /api/chats
 router.get('/', verifyToken, async (req, res) => {
+    console.log("Chats req, res:", req, " ", res);
   const userId = req.user.id;
   try {
     const { data: participants, error: partError } = await supabase

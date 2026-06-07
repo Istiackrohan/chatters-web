@@ -5,6 +5,7 @@ const verifyToken = require('../middleware/auth');
 
 // GET /api/messages/:chatId?limit=20&before=timestamp
 router.get('/:chatId', verifyToken, async (req, res) => {
+    console.log("Messages req, res:", req, " ", res);
   const userId = req.user.id;
   const { chatId } = req.params;
   const { limit = 20, before } = req.query;
