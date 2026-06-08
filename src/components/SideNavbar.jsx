@@ -1,7 +1,23 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { getInitials } from '../utils/avatar';
 
 function SideNavbar({ activeTab, setActiveTab, user, showUserMenu, setShowUserMenu, handleLogout }) {
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!showUserMenu) return;
+
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserMenu, setShowUserMenu]);
   // Derive user data from authenticated user
   const currentUser = {
     name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User",
@@ -24,7 +40,7 @@ function SideNavbar({ activeTab, setActiveTab, user, showUserMenu, setShowUserMe
       <nav className="flex-1 flex flex-col items-center space-y-4">
         <button
           onClick={() => setActiveTab("chats")}
-          className={`p-3 rounded-xl transition-all duration-200 relative group ${activeTab === "chats" ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-100"
+          className={`p-3 rounded-xl transition-all duration-200 relative group ${activeTab === "chats" ? "bg-blue-50 text-blue-600" : "text-gray-900 hover:bg-gray-100"
             }`}
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -35,7 +51,7 @@ function SideNavbar({ activeTab, setActiveTab, user, showUserMenu, setShowUserMe
 
         <button
           onClick={() => setActiveTab("groups")}
-          className={`p-3 rounded-xl transition-all duration-200 relative group ${activeTab === "groups" ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-100"
+          className={`p-3 rounded-xl transition-all duration-200 relative group ${activeTab === "groups" ? "bg-blue-50 text-blue-600" : "text-gray-900 hover:bg-gray-100"
             }`}
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -46,7 +62,7 @@ function SideNavbar({ activeTab, setActiveTab, user, showUserMenu, setShowUserMe
 
         <button
           onClick={() => setActiveTab("contacts")}
-          className={`p-3 rounded-xl transition-all duration-200 relative group ${activeTab === "contacts" ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:bg-gray-100"
+          className={`p-3 rounded-xl transition-all duration-200 relative group ${activeTab === "contacts" ? "bg-blue-50 text-blue-600" : "text-gray-900 hover:bg-gray-100"
             }`}
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -57,7 +73,7 @@ function SideNavbar({ activeTab, setActiveTab, user, showUserMenu, setShowUserMe
       </nav>
 
       {/* User Menu Button */}
-      <div className="relative">
+      <div className="relative" ref={menuRef}>
         <button
           onClick={() => setShowUserMenu(!showUserMenu)}
           className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-600 to-emerald-600 flex items-center justify-center text-white font-semibold hover:scale-105 transition-transform duration-200"
@@ -69,7 +85,7 @@ function SideNavbar({ activeTab, setActiveTab, user, showUserMenu, setShowUserMe
           <div className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
             <div className="px-4 py-3 border-b border-gray-200">
               <p className="text-sm font-medium text-gray-900">{currentUser.name}</p>
-              <p className="text-xs text-gray-500">{currentUser.email}</p>
+              <p className="text-xs text-gray-900">{currentUser.email}</p>
             </div>
             <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
               Profile Settings

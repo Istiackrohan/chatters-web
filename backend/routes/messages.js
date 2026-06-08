@@ -47,6 +47,41 @@ router.get('/:chatId', verifyToken, async (req, res) => {
   }
 });
 
+// GET /api/messages/search?q=...
+router.get('/search', verifyToken, async (req, res) => {
+  const userId = req.user.id;
+  const { q, limit = 20 } = req.query;
+  if (!q || !q.trim()) {
+    return res.json([]);
+  }
+
+  try {
+    const { data: participantChats, error: partErr } = await supabase
+      .from('chat_participants')
+      .select('chat_id')
+      .eq('user_id', userId);
+    if (partErr) throw partErr;
+
+    const chatIds = participantChats.map(p => p.chat_id);
+    if (!chatIds.length) {
+      return res.json([]);
+    }
+
+    const { data: messages, error: msgErr } = await supabase
+      .from('messages')
+      .select('id, chat_id, sender_id, content, type, media_url, created_at')
+      .in('chat_id', chatIds)
+      .ilike('content', `%${q}%`)
+      .order('created_at', { ascending: false })
+      .limit(parseInt(limit, 10));
+    if (msgErr) throw msgErr;
+
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/messages
 router.post('/', verifyToken, async (req, res) => {
   const userId = req.user.id;

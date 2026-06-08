@@ -100,5 +100,20 @@ export const api = {
     request('/messages', { method: 'POST', body: JSON.stringify({ chatId, content, type, mediaUrl }) }),
   searchUsers: (query) => request(`/users/search?q=${encodeURIComponent(query)}`),
   getAllUsers: () => request('/users/all'),
+  getUser: (id) => request(`/users/${id}`),
+  getUsers: (ids = []) => {
+    const q = ids.map(encodeURIComponent).join(',');
+    return request(`/users?ids=${q}`);
+  },
   createDirectChat: (otherUserId) => request('/chats', { method: 'POST', body: JSON.stringify({ type: 'direct', otherUserId }) }),
+  createGroupChat: (memberIds, groupName, groupAvatar = null) => request('/chats', {
+    method: 'POST',
+    body: JSON.stringify({ type: 'group', memberIds, groupName, groupAvatar }),
+  }),
+  addGroupMembers: (chatId, memberIds) => request(`/chats/${chatId}/members`, {
+    method: 'POST',
+    body: JSON.stringify({ memberIds }),
+  }),
+  leaveGroupChat: (chatId) => request(`/chats/${chatId}/members/me`, { method: 'DELETE' }),
+  searchMessages: (query) => request(`/messages/search?q=${encodeURIComponent(query)}`),
 };
