@@ -11,7 +11,7 @@ function Profile() {
   const [formData, setFormData] = useState({
     full_name: '',
     avatar_url: '',
-    status: 'online'
+    status: 'online',
   });
 
   useEffect(() => {
@@ -26,7 +26,7 @@ function Profile() {
         setFormData({
           full_name: data.full_name || '',
           avatar_url: data.avatar_url || '',
-          status: data.status || 'online'
+          status: data.status || 'online',
         });
       }
     }
@@ -47,14 +47,13 @@ function Profile() {
         full_name: formData.full_name,
         avatar_url: formData.avatar_url,
         status: formData.status,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', user.id);
     if (error) {
-      setMessage('Error: ' + error.message);
+      setMessage(`Error: ${error.message}`);
     } else {
       setMessage('Profile updated successfully!');
-      // Optionally refresh user metadata
       await supabase.auth.updateUser({ data: { full_name: formData.full_name } });
     }
     setLoading(false);
@@ -66,8 +65,8 @@ function Profile() {
         <div className="px-8 py-10 sm:px-12">
           <div className="text-center mb-8">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-600">Profile Settings</p>
-            <h1 className="mt-4 text-3xl text-gray-900 font-semibold text-slate-900">Edit your profile</h1>
-            <p className="mt-2 text-sm text-slate-500">Update your display name, avatar, and online status.</p>
+            <h1 style={{ fontSize: '4rem', fontWeight: 'bold', marginTop:'5xp', marginBottom: '5px'}} className="mt-4 text-3xl font-semibold text-slate-950">Edit your profile</h1>
+            <p className="mt-2 text-sm text-slate-600">Update your display name, avatar, and online status.</p>
           </div>
 
           {message && (
@@ -79,41 +78,41 @@ function Profile() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Full Name</label>
+                <label className="block text-sm font-medium text-slate-800 mb-2">Full Name</label>
                 <input
                   type="text"
                   name="full_name"
                   value={formData.full_name}
                   onChange={handleChange}
-                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-3xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 placeholder:text-slate-500 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Avatar URL</label>
+                <label className="block text-sm font-medium text-slate-800 mb-2">Avatar URL</label>
                 <input
                   type="url"
                   name="avatar_url"
                   value={formData.avatar_url}
                   onChange={handleChange}
                   placeholder="https://example.com/avatar.jpg"
-                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-3xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 placeholder:text-slate-500 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
                 {formData.avatar_url && (
                   <div className="mt-4 flex items-center gap-4">
                     <div className="h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
                       <img src={formData.avatar_url} alt="Preview" className="h-full w-full object-cover" />
                     </div>
-                    <span className="text-sm text-slate-500">Preview avatar image</span>
+                    <span className="text-sm text-slate-600">Preview avatar image</span>
                   </div>
                 )}
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                <label className="block text-sm font-medium text-slate-800 mb-2">Status</label>
                 <select
                   name="status"
                   value={formData.status}
                   onChange={handleChange}
-                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-3xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="online">Online</option>
                   <option value="away">Away</option>
@@ -127,7 +126,7 @@ function Profile() {
               <button
                 type="button"
                 onClick={() => navigate('/')}
-                className="inline-flex justify-center rounded-3xl border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                className="inline-flex justify-center rounded-3xl border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
               >
                 Cancel
               </button>

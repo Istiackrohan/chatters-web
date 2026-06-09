@@ -3,9 +3,43 @@ const router = express.Router();
 const supabase = require('../supabaseClient');
 const verifyToken = require('../middleware/auth');
 
+// GET /api/messages/search?q=...
+router.get('/search', verifyToken, async (req, res) => {
+  const userId = req.user.id;
+  const { q, limit = 20 } = req.query;
+  if (!q || !q.trim()) {
+    return res.json([]);
+  }
+
+  try {
+    const { data: participantChats, error: partErr } = await supabase
+      .from('chat_participants')
+      .select('chat_id')
+      .eq('user_id', userId);
+    if (partErr) throw partErr;
+
+    const chatIds = participantChats.map(p => p.chat_id);
+    if (!chatIds.length) {
+      return res.json([]);
+    }
+
+    const { data: messages, error: msgErr } = await supabase
+      .from('messages')
+      .select('id, chat_id, sender_id, content, type, media_url, created_at')
+      .in('chat_id', chatIds)
+      .ilike('content', `%${q}%`)
+      .order('created_at', { ascending: false })
+      .limit(parseInt(limit, 10));
+    if (msgErr) throw msgErr;
+
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/messages/:chatId?limit=20&before=timestamp
 router.get('/:chatId', verifyToken, async (req, res) => {
-    console.log("Messages req, res:", req, " ", res);
   const userId = req.user.id;
   const { chatId } = req.params;
   const { limit = 20, before } = req.query;
@@ -42,41 +76,6 @@ router.get('/:chatId', verifyToken, async (req, res) => {
       .eq('user_id', userId);
     
     res.json(messages.reverse());
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/messages/search?q=...
-router.get('/search', verifyToken, async (req, res) => {
-  const userId = req.user.id;
-  const { q, limit = 20 } = req.query;
-  if (!q || !q.trim()) {
-    return res.json([]);
-  }
-
-  try {
-    const { data: participantChats, error: partErr } = await supabase
-      .from('chat_participants')
-      .select('chat_id')
-      .eq('user_id', userId);
-    if (partErr) throw partErr;
-
-    const chatIds = participantChats.map(p => p.chat_id);
-    if (!chatIds.length) {
-      return res.json([]);
-    }
-
-    const { data: messages, error: msgErr } = await supabase
-      .from('messages')
-      .select('id, chat_id, sender_id, content, type, media_url, created_at')
-      .in('chat_id', chatIds)
-      .ilike('content', `%${q}%`)
-      .order('created_at', { ascending: false })
-      .limit(parseInt(limit, 10));
-    if (msgErr) throw msgErr;
-
-    res.json(messages);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

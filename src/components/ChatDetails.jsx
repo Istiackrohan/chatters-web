@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { getInitials } from '../utils/avatar';
 import { addBlockedUser, isUserBlocked, removeBlockedUser } from '../utils/blockList';
+import { getMessagePreview } from '../utils/messageContent';
 
 function DetailAction({ label, children, danger = false, onClick }) {
   return (
@@ -86,7 +87,7 @@ function ChatDetails({ activeChatData, contacts = [], messages = [], pinnedMessa
   const searchResults = useMemo(() => (
     messages.filter(message =>
       searchQuery.trim() &&
-      message.content?.toLowerCase().includes(searchQuery.trim().toLowerCase())
+      getMessagePreview(message.content).toLowerCase().includes(searchQuery.trim().toLowerCase())
     )
   ), [messages, searchQuery]);
 
@@ -325,7 +326,7 @@ function ChatDetails({ activeChatData, contacts = [], messages = [], pinnedMessa
           <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200">
             {searchResults.length ? searchResults.map(message => (
               <div key={message.id} className="border-b border-gray-100 p-3 last:border-b-0">
-                <p className="text-sm text-gray-900">{message.content}</p>
+                <p className="text-sm text-gray-900">{getMessagePreview(message.content)}</p>
                 <p className="mt-1 text-xs text-gray-500">{new Date(message.created_at).toLocaleString()}</p>
               </div>
             )) : (
@@ -356,7 +357,7 @@ function ChatDetails({ activeChatData, contacts = [], messages = [], pinnedMessa
           <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200">
             {pinnedMessages.length ? pinnedMessages.map(message => (
               <div key={message.id} className="border-b border-gray-100 p-3 last:border-b-0">
-                <p className="text-sm text-gray-900">{message.content}</p>
+                <p className="text-sm text-gray-900">{getMessagePreview(message.content)}</p>
                 <p className="mt-1 text-xs text-gray-500">{new Date(message.created_at).toLocaleString()}</p>
               </div>
             )) : (

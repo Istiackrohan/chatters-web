@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useProfileCache } from "../contexts/ProfileCacheContext";
 import { getInitials } from "../utils/avatar";
+import { decodeMessageContent } from "../utils/messageContent";
 
 function MessageTicks({ status }) {
   if (!status) return null;
@@ -141,7 +142,17 @@ function ConversationArea({ activeChatId, activeChatData, messages = [], contact
     }
 
     if (messageInput.trim() && activeChatId) {
-      onSendMessage(activeChatId, messageInput);
+      onSendMessage(activeChatId, {
+        content: messageInput,
+        type: 'text',
+        replyTo: replyToMessage
+          ? {
+              id: replyToMessage.id,
+              text: replyToMessage.text,
+              senderName: replyToMessage.sender === 'me' ? 'You' : (replyToMessage.senderName || 'Message'),
+            }
+          : null,
+      });
       setMessageInput("");
       setReplyToMessage(null);
     }
@@ -345,18 +356,23 @@ function ConversationArea({ activeChatId, activeChatData, messages = [], contact
 
   const renderMessages = messages
     .filter(msg => !hiddenMessageIds.includes(msg.id))
-    .map(msg => ({
-    id: msg.id,
-    text: localMessageText[msg.id] ?? msg.content,
-    sender: msg.sender_id === user?.id ? 'me' : 'them',
-    senderName: getSenderName(msg.sender_id),
-    sender_id: msg.sender_id,
-    created_at: msg.created_at,
-    time: formatTime(msg.created_at),
-    type: msg.type,
-    mediaUrl: msg.media_url,
-    deliveryStatus: msg.delivery_status,
-  }));
+    .map(msg => {
+      const decodedContent = decodeMessageContent(localMessageText[msg.id] ?? msg.content);
+
+      return {
+        id: msg.id,
+        text: decodedContent.text,
+        sender: msg.sender_id === user?.id ? 'me' : 'them',
+        senderName: getSenderName(msg.sender_id),
+        sender_id: msg.sender_id,
+        created_at: msg.created_at,
+        time: formatTime(msg.created_at),
+        type: msg.type,
+        mediaUrl: msg.media_url,
+        deliveryStatus: msg.delivery_status,
+        replyTo: msg.reply_to || decodedContent.replyTo,
+      };
+    });
 
   const pinnedMessages = renderMessages.filter(message => pinnedMessageIds.includes(message.id));
   const activeMenuMessage = renderMessages.find(message => message.id === activeMessageMenu);
@@ -517,19 +533,39 @@ function ConversationArea({ activeChatId, activeChatData, messages = [], contact
                   )}
                   {message.type === 'image' ? (
                     <div className="rounded-lg overflow-hidden cursor-pointer">
+                      {message.replyTo && (
+                        <div className="mb-1 rounded-lg bg-black/5 px-3 py-2 text-left opacity-70">
+                          <p className="text-xs font-semibold text-gray-700">{message.replyTo.senderName}</p>
+                          <p className="text-xs text-gray-600 line-clamp-2">{message.replyTo.text}</p>
+                        </div>
+                      )}
                       <img src={message.mediaUrl} alt="Shared" className="max-w-[200px] rounded-lg" />
                     </div>
                   ) : message.type === 'file' ? (
-                    <div className="bg-gray-100 rounded-2xl px-3 py-1.5 flex items-center gap-2">
-                      <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                      <a href={message.mediaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">
-                        {message.text}
-                      </a>
+                    <div className={`bg-gray-100 rounded-2xl px-3 py-1.5 ${message.replyTo ? 'flex flex-col items-start' : 'flex items-center'} gap-2`}>
+                      {message.replyTo && (
+                        <div className="mb-1 rounded-lg bg-black/5 px-3 py-2 text-left opacity-70">
+                          <p className="text-xs font-semibold text-gray-700">{message.replyTo.senderName}</p>
+                          <p className="text-xs text-gray-600 line-clamp-2">{message.replyTo.text}</p>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        <a href={message.mediaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">
+                          {message.text}
+                        </a>
+                      </div>
                     </div>
                   ) : message.type === 'link' ? (
                     <div className="bg-gray-100 rounded-2xl px-3 py-1.5">
+                      {message.replyTo && (
+                        <div className="mb-1 rounded-lg bg-black/5 px-3 py-2 text-left opacity-70">
+                          <p className="text-xs font-semibold text-gray-700">{message.replyTo.senderName}</p>
+                          <p className="text-xs text-gray-600 line-clamp-2">{message.replyTo.text}</p>
+                        </div>
+                      )}
                       <a href={message.mediaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">
                         {message.text}
                       </a>
@@ -542,6 +578,16 @@ function ConversationArea({ activeChatId, activeChatData, messages = [], contact
                           : 'bg-white text-gray-900 shadow-sm border border-gray-200'
                       }`}
                     >
+                      {message.replyTo && (
+                        <div className={`mb-1 rounded-lg px-3 py-2 text-left opacity-75 ${
+                          message.sender === 'me'
+                            ? 'bg-blue-500 text-blue-50'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          <p className={`text-xs font-semibold ${message.sender === 'me' ? 'text-blue-50' : 'text-gray-700'}`}>{message.replyTo.senderName}</p>
+                          <p className={`text-xs line-clamp-2 ${message.sender === 'me' ? 'text-blue-100' : 'text-gray-600'}`}>{message.replyTo.text}</p>
+                        </div>
+                      )}
                       <p className="text-sm">{message.text}</p>
                     </div>
                   )}

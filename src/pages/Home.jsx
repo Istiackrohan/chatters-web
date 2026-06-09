@@ -10,6 +10,7 @@ import { api } from "../api/client";
 import { supabase } from "../lib/supabase";
 import { useDebounce } from "../hooks/useDebounce";
 import { loadMutedChats, toggleMutedChat } from "../utils/mutedChats";
+import { encodeMessageContent, getMessagePreview } from "../utils/messageContent";
 
 function Home() {
   const { user, signOut } = useAuth();
@@ -154,7 +155,7 @@ function Home() {
       const missingIds = [...new Set(
         msgs
           .map(m => m.sender_id)
-          .filter(id => id && id !== user?.id && !contacts.some(c => c.id === id) && !getProfile(id))
+          .filter(id => id && id !== user?.id)
       )];
       if (missingIds.length === 0) return;
 
@@ -176,16 +177,20 @@ function Home() {
     } catch (err) {
       console.error('Failed to fetch sender profiles:', err);
     }
-  }, [contacts, fetchProfiles, getProfile, user]);
+  }, [fetchProfiles, user?.id]);
 
 
   async function refreshChats() {
     const allChats = await api.getChats();
-    const direct = allChats.filter(c => c.type === 'direct');
-    const groupList = allChats.filter(c => c.type === 'group');
+    const normalizedChats = allChats.map(chat => ({
+      ...chat,
+      lastMessage: getMessagePreview(chat.lastMessage),
+    }));
+    const direct = normalizedChats.filter(c => c.type === 'direct');
+    const groupList = normalizedChats.filter(c => c.type === 'group');
     setChats(direct);
     setGroups(groupList);
-    return allChats;
+    return normalizedChats;
   }
 
   useEffect(() => {
@@ -380,10 +385,11 @@ function Home() {
           }
           // Update chat list order for incoming message
           if (newMessage.sender_id !== user?.id) {
+            const messagePreview = getMessagePreview(newMessage.content);
             setChats(prevChats => {
               const updated = prevChats.map(chat =>
                 chat.id === newMessage.chat_id
-                  ? { ...chat, lastMessage: newMessage.content, lastMessageTime: newMessage.created_at }
+                  ? { ...chat, lastMessage: messagePreview, lastMessageTime: newMessage.created_at }
                   : chat
               );
               return updated.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
@@ -391,7 +397,7 @@ function Home() {
             setGroups(prevGroups => {
               const updated = prevGroups.map(group =>
                 group.id === newMessage.chat_id
-                  ? { ...group, lastMessage: newMessage.content, lastMessageTime: newMessage.created_at }
+                  ? { ...group, lastMessage: messagePreview, lastMessageTime: newMessage.created_at }
                   : group
               );
               return updated.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
@@ -478,16 +484,19 @@ function Home() {
           content: message?.content || '',
           type: message?.type || 'text',
           mediaUrl: message?.mediaUrl || null,
+          replyTo: message?.replyTo || null,
         };
 
     if (!payload.content && !payload.mediaUrl) return;
 
     const createdAt = new Date().toISOString();
+    const encodedContent = encodeMessageContent(payload.content, payload.replyTo);
+    const messagePreview = getMessagePreview(encodedContent);
     const pendingMessage = {
       id: `pending-${createdAt}`,
       chat_id: chatId,
       sender_id: user?.id,
-      content: payload.content,
+      content: encodedContent,
       type: payload.type,
       media_url: payload.mediaUrl,
       created_at: createdAt,
@@ -500,7 +509,7 @@ function Home() {
     }));
 
     try {
-      const newMsg = await api.sendMessage(chatId, payload.content, payload.type, payload.mediaUrl);
+      const newMsg = await api.sendMessage(chatId, encodedContent, payload.type, payload.mediaUrl);
       setMessages(prev => ({
         ...prev,
         [chatId]: (prev[chatId] || []).map(msg =>
@@ -510,13 +519,13 @@ function Home() {
       // Optimistically reorder chat list
       setChats(prevChats => {
         const updated = prevChats.map(chat =>
-          chat.id === chatId ? { ...chat, lastMessage: payload.content, lastMessageTime: createdAt } : chat
+          chat.id === chatId ? { ...chat, lastMessage: messagePreview, lastMessageTime: createdAt } : chat
         );
         return updated.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
       });
       setGroups(prevGroups => {
         const updated = prevGroups.map(group =>
-          group.id === chatId ? { ...group, lastMessage: payload.content, lastMessageTime: createdAt } : group
+          group.id === chatId ? { ...group, lastMessage: messagePreview, lastMessageTime: createdAt } : group
         );
         return updated.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
       });

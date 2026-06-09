@@ -2,10 +2,28 @@ import { useEffect, useRef, useState } from 'react';
 
 function Notifications({ notifications = [], onOpenChat, onClearAll }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState({});
   const wrapperRef = useRef(null);
+  const dropdownWidth = 320;
 
   useEffect(() => {
     if (!isOpen) return;
+
+    const updateDropdownPosition = () => {
+      if (!wrapperRef.current) return;
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const viewportPadding = 12;
+      const left = Math.max(
+        viewportPadding,
+        Math.min(rect.right - dropdownWidth, window.innerWidth - dropdownWidth - viewportPadding)
+      );
+
+      setDropdownStyle({
+        top: `${rect.bottom + 8}px`,
+        left: `${left}px`,
+        width: `${dropdownWidth}px`,
+      });
+    };
 
     const handleOutsideClick = (event) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
@@ -13,9 +31,14 @@ function Notifications({ notifications = [], onOpenChat, onClearAll }) {
       }
     };
 
+    updateDropdownPosition();
     document.addEventListener('mousedown', handleOutsideClick);
+    window.addEventListener('resize', updateDropdownPosition);
+    window.addEventListener('scroll', updateDropdownPosition, true);
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
+      window.removeEventListener('resize', updateDropdownPosition);
+      window.removeEventListener('scroll', updateDropdownPosition, true);
     };
   }, [isOpen]);
 
@@ -40,7 +63,10 @@ function Notifications({ notifications = [], onOpenChat, onClearAll }) {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl z-50">
+        <div
+          className="fixed z-[100] max-w-[calc(100vw-24px)] overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-xl"
+          style={dropdownStyle}
+        >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <div>
               <p className="text-sm font-semibold text-gray-900">Notifications</p>

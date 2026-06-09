@@ -1,10 +1,15 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 
 const ProfileCacheContext = createContext(null);
 
 export function ProfileCacheProvider({ children }) {
   const [profiles, setProfiles] = useState({});
+  const profilesRef = useRef({});
+
+  useEffect(() => {
+    profilesRef.current = profiles;
+  }, [profiles]);
 
   const getProfile = useCallback((id) => {
     if (!id) return null;
@@ -13,8 +18,9 @@ export function ProfileCacheProvider({ children }) {
 
   const fetchProfiles = useCallback(async (ids = []) => {
     const unique = [...new Set(ids.filter(Boolean))];
-    const toFetch = unique.filter(id => !profiles[id]);
-    if (toFetch.length === 0) return Object.values(profiles).filter(p => unique.includes(p.id));
+    const cachedProfiles = profilesRef.current;
+    const toFetch = unique.filter(id => !cachedProfiles[id]);
+    if (toFetch.length === 0) return Object.values(cachedProfiles).filter(p => unique.includes(p.id));
 
     try {
       // Try batch endpoint first
@@ -32,16 +38,20 @@ export function ProfileCacheProvider({ children }) {
           fetched.forEach(u => {
             next[u.id] = { id: u.id, full_name: u.full_name, avatar_url: u.avatar_url, status: u.status };
           });
+          profilesRef.current = next;
           return next;
         });
       }
 
-      return fetched;
+      return [
+        ...Object.values(cachedProfiles).filter(p => unique.includes(p.id)),
+        ...fetched,
+      ];
     } catch (err) {
       console.error('ProfileCache fetchProfiles error', err);
       return [];
     }
-  }, [profiles]);
+  }, []);
 
   const value = {
     getProfile,

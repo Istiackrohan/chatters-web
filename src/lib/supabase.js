@@ -8,15 +8,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-// Debug logging (remove in production)
-if (import.meta.env.DEV) {
-  console.log('🔧 Supabase Config Debug:');
-  console.log('  URL exists:', !!supabaseUrl);
-  console.log('  ANON KEY exists:', !!supabaseAnonKey);
-  if (!supabaseUrl) console.error('  ❌ VITE_SUPABASE_URL is missing!');
-  if (!supabaseAnonKey) console.error('  ❌ VITE_SUPABASE_ANON_KEY is missing!');
-}
-
 // Validate environment variables
 if (!supabaseUrl) {
   throw new Error(
@@ -45,14 +36,3 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     flowType: 'pkce'
   }
 })
-
-// Optional: Test connection
-if (import.meta.env.DEV) {
-  supabase.auth.getSession().then(({ data, error }) => {
-    if (error) {
-      console.error('❌ Supabase connection error:', error.message);
-    } else {
-      console.log('✅ Supabase connected successfully!');
-    }
-  });
-}

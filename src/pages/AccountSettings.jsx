@@ -4,6 +4,28 @@ import authService from '../services/auth';
 import { supabase } from '../lib/supabase';
 import { loadBlockedUsers, removeBlockedUser } from '../utils/blockList';
 
+function normalizeSettings(data = {}) {
+  return {
+    showProfile: data.show_profile ?? true,
+    allowSearch: data.allow_search ?? true,
+    twoFactorEnabled: data.two_factor_enabled ?? false,
+  };
+}
+
+function normalizeSettingChanges(changes = {}) {
+  const next = {};
+  if (Object.prototype.hasOwnProperty.call(changes, 'show_profile')) {
+    next.showProfile = changes.show_profile;
+  }
+  if (Object.prototype.hasOwnProperty.call(changes, 'allow_search')) {
+    next.allowSearch = changes.allow_search;
+  }
+  if (Object.prototype.hasOwnProperty.call(changes, 'two_factor_enabled')) {
+    next.twoFactorEnabled = changes.two_factor_enabled;
+  }
+  return next;
+}
+
 function AccountSettings() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -31,11 +53,7 @@ function AccountSettings() {
         const { data } = await supabase.from('profiles').select('show_profile,allow_search,two_factor_enabled').eq('id', user.id).maybeSingle();
         if (!mounted) return;
         if (data) {
-          setSettings({
-            showProfile: data.show_profile ?? true,
-            allowSearch: data.allow_search ?? true,
-            twoFactorEnabled: data.two_factor_enabled ?? false,
-          });
+          setSettings(normalizeSettings(data));
         }
       } catch (err) {
         console.error('Failed to load profile settings', err);
@@ -86,8 +104,9 @@ function AccountSettings() {
     setLoading(true);
     try {
       const payload = { id: user.id, ...changes };
-      await supabase.from('profiles').upsert(payload);
-      setSettings(prev => ({ ...prev, ...changes }));
+      const { error } = await supabase.from('profiles').upsert(payload, { onConflict: 'id' });
+      if (error) throw error;
+      setSettings(prev => ({ ...prev, ...normalizeSettingChanges(changes) }));
       setMessage({ type: 'success', text: 'Settings saved' });
     } catch (err) {
       console.error(err);
@@ -115,8 +134,9 @@ function AccountSettings() {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-4">Account Settings</h1>
+    <div className="min-h-screen bg-gray-50 px-6 py-6 text-gray-900">
+      <div className="mx-auto max-w-3xl">
+      <h1 style={{ textAlign: 'center', fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '5px' }} className="text-2xl font-semibold mb-4 text-gray-950">Account Settings</h1>
 
       {message && (
         <div className={`mb-4 p-3 rounded ${message.type === 'error' ? 'bg-red-50 text-gray-700' : 'bg-green-50 text-green-700'}`}>
@@ -125,7 +145,7 @@ function AccountSettings() {
       )}
 
       <section className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
-        <h2 className="text-lg text-gray-900 font-medium mb-2">Change Password</h2>
+        <h2 className="text-lg text-gray-900 font-semibold mb-2">Change Password</h2>
         <form onSubmit={handleUpdatePassword} className="space-y-3">
           <div className="relative">
             <input
@@ -133,7 +153,7 @@ function AccountSettings() {
               placeholder="New password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-lg border px-3 py-2 pr-10"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-950 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
             <button
               type="button"
@@ -159,7 +179,7 @@ function AccountSettings() {
               placeholder="Confirm password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-lg border px-3 py-2 pr-10"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-950 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
             <button
               type="button"
@@ -186,8 +206,8 @@ function AccountSettings() {
       </section>
 
       <section className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
-        <h2 className="text-lg text-gray-900 font-medium mb-2">Privacy & Safety</h2>
-        <div className="space-y-3">
+        <h2 className="text-lg text-gray-950 font-semibold mb-2">Privacy & Safety</h2>
+        <div className="space-y-3 text-gray-800">
           <label className="flex items-center gap-3">
             <input type="checkbox" checked={settings.showProfile} onChange={(e) => saveSettings({ show_profile: e.target.checked })} />
             <span>Show my profile to others</span>
@@ -200,7 +220,7 @@ function AccountSettings() {
       </section>
 
       <section className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
-        <h2 className="text-lg font-medium mb-2">Blocked contacts</h2>
+        <h2 className="text-lg font-semibold text-gray-950 mb-2">Blocked contacts</h2>
         {blockedUsers.length === 0 ? (
           <p className="text-sm text-gray-600">You have not blocked any contacts yet.</p>
         ) : (
@@ -226,8 +246,8 @@ function AccountSettings() {
       </section>
 
       <section className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
-        <h2 className="text-lg font-medium mb-2">Security</h2>
-        <div className="space-y-3">
+        <h2 className="text-lg font-semibold text-gray-950 mb-2">Security</h2>
+        <div className="space-y-3 text-gray-800">
           <label className="flex items-center gap-3">
             <input type="checkbox" checked={settings.twoFactorEnabled} onChange={(e) => saveSettings({ two_factor_enabled: e.target.checked })} />
             <span>Enable Two-step verification (simulated)</span>
@@ -236,11 +256,11 @@ function AccountSettings() {
       </section>
 
       <section className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
-        <h2 className="text-lg text-gray-900 font-medium mb-2">Report an issue</h2>
+        <h2 className="text-lg text-gray-950 font-semibold mb-2">Report an issue</h2>
         <form onSubmit={handleReportIssue} className="space-y-3">
-          <input name="email" type="email" placeholder="Your email" className="w-full rounded-lg border px-3 py-2" />
-          <input name="subject" type="text" placeholder="Subject" className="w-full rounded-lg border px-3 py-2" />
-          <textarea name="message" placeholder="Describe the issue" className="w-full rounded-lg border px-3 py-2 h-28" />
+          <input name="email" type="email" placeholder="Your email" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-950 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+          <input name="subject" type="text" placeholder="Subject" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-950 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+          <textarea name="message" placeholder="Describe the issue" className="w-full rounded-lg border border-gray-300 px-3 py-2 h-28 text-gray-950 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
           <div>
             <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg">Submit report</button>
           </div>
@@ -248,7 +268,7 @@ function AccountSettings() {
       </section>
 
       <section className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
-        <h2 className="text-lg text-gray-900 font-medium mb-2">Terms & Policies</h2>
+        <h2 className="text-lg text-gray-950 font-semibold mb-2">Terms & Policies</h2>
         <p className="text-sm text-gray-700 mb-2">By using this app you agree to our terms and privacy policy.</p>
         <details className="text-sm text-gray-700">
           <summary className="cursor-pointer">View full terms & policies</summary>
@@ -257,6 +277,7 @@ function AccountSettings() {
           </div>
         </details>
       </section>
+      </div>
     </div>
   );
 }

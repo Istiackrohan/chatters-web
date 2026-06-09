@@ -3,16 +3,29 @@ const router = express.Router();
 const supabase = require('../supabaseClient');
 const verifyToken = require('../middleware/auth');
 
+function formatChatProfile(profile) {
+  if (!profile) return null;
+
+  const showProfile = profile.show_profile !== false;
+
+  return {
+    id: profile.id,
+    full_name: showProfile ? profile.full_name : 'Private user',
+    avatar_url: showProfile ? profile.avatar_url : null,
+    status: showProfile ? profile.status : 'offline',
+  };
+}
+
 async function resolveChatUserProfile(userId) {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, status')
+    .select('id, full_name, avatar_url, status, show_profile')
     .eq('id', userId)
     .limit(1)
     .maybeSingle();
 
   if (profileError) throw profileError;
-  if (profile) return profile;
+  if (profile) return formatChatProfile(profile);
 
   const { data: authResult, error: authError } = await supabase.auth.admin.getUserById(userId);
   if (authError) throw authError;
@@ -29,7 +42,6 @@ async function resolveChatUserProfile(userId) {
 
 // GET /api/chats
 router.get('/', verifyToken, async (req, res) => {
-    console.log("Chats req, res:", req, " ", res);
   const userId = req.user.id;
   try {
     const { data: participants, error: partError } = await supabase
