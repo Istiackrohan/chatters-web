@@ -57,7 +57,6 @@ app.use('/users', require('./routes/users'));
 // Health check
 app.get('/', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
-  res.send("The server is running.....")
 });
 
 app.listen(port, () => {
