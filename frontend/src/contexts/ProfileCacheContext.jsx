@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { api } from '../api/client';
-
-const ProfileCacheContext = createContext(null);
+import { ProfileCacheContext } from './ProfileCacheContextValue';
 
 export function ProfileCacheProvider({ children }) {
   const [profiles, setProfiles] = useState({});
@@ -65,11 +64,3 @@ export function ProfileCacheProvider({ children }) {
     </ProfileCacheContext.Provider>
   );
 }
-
-export function useProfileCache() {
-  const ctx = useContext(ProfileCacheContext);
-  if (!ctx) throw new Error('useProfileCache must be used within ProfileCacheProvider');
-  return ctx;
-}
-
-export default ProfileCacheContext;

@@ -58,11 +58,10 @@ function ChatDetails({ activeChatData, contacts = [], messages = [], pinnedMessa
   const [sharingContactId, setSharingContactId] = useState(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const [blockedVersion, setBlockedVersion] = useState(0);
+  const [, setBlockedVersion] = useState(0);
 
   const isGroup = activeChatData?.type === 'group';
-  const groupMembers = activeChatData?.group_members || [];
-  const existingMemberIds = new Set(groupMembers.map(member => member.id));
+  const groupMembers = useMemo(() => activeChatData?.group_members || [], [activeChatData?.group_members]);
   const directContact = activeChatData?.otherUser || {
     id: activeChatData?.other_user_id,
     full_name: activeChatData?.name,
@@ -72,17 +71,15 @@ function ChatDetails({ activeChatData, contacts = [], messages = [], pinnedMessa
   };
   const directContactId = directContact?.id;
   const directContactName = directContact?.full_name || directContact?.name || activeChatData?.name || 'Contact';
-  const directContactBlocked = useMemo(
-    () => (directContactId ? isUserBlocked(directContactId) : false),
-    [directContactId, blockedVersion]
-  );
+  const directContactBlocked = directContactId ? isUserBlocked(directContactId) : false;
 
-  const addableContacts = useMemo(() => (
-    contacts.filter(contact =>
+  const addableContacts = useMemo(() => {
+    const existingMemberIds = new Set(groupMembers.map(member => member.id));
+    return contacts.filter(contact =>
       !existingMemberIds.has(contact.id) &&
       (!memberSearch.trim() || contact.name?.toLowerCase().includes(memberSearch.trim().toLowerCase()))
-    )
-  ), [contacts, existingMemberIds, memberSearch]);
+    );
+  }, [contacts, groupMembers, memberSearch]);
 
   const searchResults = useMemo(() => (
     messages.filter(message =>

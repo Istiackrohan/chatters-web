@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 function AuthCallback() {
     const navigate = useNavigate();
     const [error, setError] = useState(null);
-    const [message, setMessage] = useState('Completing sign in...');
+    const [message] = useState('Completing sign in...');
 
     useEffect(() => {
         const handleCallback = async () => {

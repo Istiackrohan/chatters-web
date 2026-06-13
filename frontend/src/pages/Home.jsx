@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { useProfileCache } from "../contexts/ProfileCacheContext";
+import { useAuth } from "../hooks/useAuth";
+import { useProfileCache } from "../hooks/useProfileCache";
 import { useNavigate } from "react-router-dom";
 import SideNavbar from "../components/SideNavbar";
 import ChatList from "../components/ChatList";
@@ -35,7 +35,7 @@ function Home() {
 
   const subscriptionRef = useRef(null);
   const presenceChannelRef = useRef(null);
-  const { fetchProfiles, getProfile } = useProfileCache();
+  const { fetchProfiles } = useProfileCache();
 
   const notifications = useMemo(() => {
     const directNotifications = chats

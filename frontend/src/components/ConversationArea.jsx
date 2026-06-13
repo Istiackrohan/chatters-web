@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { useProfileCache } from "../contexts/ProfileCacheContext";
+import { useAuth } from "../hooks/useAuth";
+import { useProfileCache } from "../hooks/useProfileCache";
 import { getInitials } from "../utils/avatar";
 import { decodeMessageContent } from "../utils/messageContent";
 

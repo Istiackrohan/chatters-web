@@ -1,15 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import authService from '../services/auth';
-
-const AuthContext = createContext({});
-
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within AuthProvider');
-    }
-    return context;
-};
+import { AuthContext } from './AuthContextValue';
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
@@ -17,8 +8,23 @@ export const AuthProvider = ({ children }) => {
     const [session, setSession] = useState(null);
 
     useEffect(() => {
+        let cancelled = false;
+
         // Check current session on mount
-        checkUser();
+        authService.getCurrentUser()
+            .then(({ success, user }) => {
+                if (!cancelled && success) {
+                    setUser(user);
+                }
+            })
+            .catch((error) => {
+                console.error('Error checking user:', error);
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            });
 
         // Listen for auth changes
         const { data: { subscription } } = authService.onAuthStateChange((_event, session) => {
@@ -28,22 +34,10 @@ export const AuthProvider = ({ children }) => {
         });
 
         return () => {
+            cancelled = true;
             subscription.unsubscribe();
         };
     }, []);
-
-    const checkUser = async () => {
-        try {
-            const { success, user } = await authService.getCurrentUser();
-            if (success) {
-                setUser(user);
-            }
-        } catch (error) {
-            console.error('Error checking user:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const signInWithGoogle = async () => {
         const result = await authService.signInWithGoogle();
